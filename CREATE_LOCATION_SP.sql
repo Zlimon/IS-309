@@ -50,6 +50,6 @@ IS
                 DBMS_OUTPUT.PUT_LINE (ex_error_msg);
                 ROLLBACK;
             WHEN OTHERS THEN
-                DBMS_OUTPUT.PUT_LINE('An error occured inserting new person!');
+                DBMS_OUTPUT.PUT_LINE('An error occured inserting new location!');
                 ROLLBACK;
     END;
