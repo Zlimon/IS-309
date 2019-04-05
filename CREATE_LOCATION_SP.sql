@@ -9,7 +9,7 @@ create or replace procedure CREATE_LOCATION_SP (
 )
 IS
     ex_exception        EXCEPTION;
-    ex_error_msg        VARCHAR(100);
+    ex_error_msg        VARCHAR (200);
     checked_location_id NUMBER;
 
     CURSOR check_location_duplicate IS
