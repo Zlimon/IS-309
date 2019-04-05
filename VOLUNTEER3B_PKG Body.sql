@@ -283,7 +283,7 @@ IS
                     p_org_descrip,
                     p_org_phone,
                     p_org_type,
-                    p_org_creation_date,
+                    current_creation_date,
                     p_org_URL,
                     p_org_image_URL,
                     p_org_linkedin_URL,
@@ -718,7 +718,7 @@ IS
     IS
         BEGIN
         NULL;
-        END CREATE_COMMITMENT_PP; 
+        END CREATE_COMMITMENT_PP;
 
     procedure RECORD_HOURS_PP (
         p_member_email      IN  VARCHAR,    -- Not NULL
@@ -726,10 +726,107 @@ IS
         p_hours             IN  NUMBER,     -- NOT NULL
         p_volunteer_date    IN  DATE        -- NOT NULL
     )
-        IS
+    IS
+        ex_exception            EXCEPTION;
+        ex_error_msg            VARCHAR (200);
+        checked_person_id       NUMBER;
+        checked_date            DATE;
+        checked_member_id       NUMBER;
+        checked_opp_id          NUMBER;
+
+        CURSOR check_date IS
+            SELECT TIMESHEET_VOLUNTEER_DATE FROM VM_TIMESHEET WHERE TIMESHEET_VOLUNTEER_DATE = p_volunteer_date AND OPPORTUNITY_ID = p_opportunity_id AND PERSON_ID = checked_person_id;
+
+        CURSOR check_person_id IS
+            SELECT PERSON_ID FROM VM_PERSON WHERE PERSON_EMAIL = p_member_email;
+
+        CURSOR check_member_id IS
+            SELECT PERSON_ID FROM VM_MEMBER WHERE PERSON_ID = checked_person_id;
+        
+        CURSOR check_opp_id IS
+            SELECT OPPORTUNITY_ID FROM VM_OPPORTUNITY WHERE OPPORTUNITY_ID = p_opportunity_id;
+
         BEGIN
-        NULL;
-        END RECORD_HOURS_PP; 
+            IF p_member_email IS NULL THEN
+                ex_error_msg := 'Missing email! Can not be NULL';
+                RAISE ex_exception;
+            ELSIF p_opportunity_id IS NULL THEN
+                ex_error_msg := 'Missing opportunity ID! Can not be NULL';
+                RAISE ex_exception;
+            ELSIF p_hours IS NULL THEN
+                ex_error_msg := 'Missing amount of hours! Can not be NULL';
+                RAISE ex_exception;
+            ELSIF p_volunteer_date IS NULL THEN
+                ex_error_msg := 'Missing volunteer date! Can not be NULL';
+                RAISE ex_exception;
+            ELSIF p_hours < 0 AND p_hours > 24 THEN
+                ex_error_msg := 'Invalid number of hours for opportunity ' || p_opportunity_id || '. Must be a number between 1 and 24 hours';
+                RAISE ex_exception;
+            ELSIF p_volunteer_date > CURRENT_DATE THEN
+                ex_error_msg := 'You can not insert a future date!';
+                RAISE ex_exception;
+            ELSE
+                OPEN check_person_id;
+                FETCH check_person_id INTO checked_person_id;
+                    IF check_person_id%FOUND THEN
+                        OPEN check_member_id;
+                        FETCH check_member_id INTO checked_member_id;
+                            OPEN check_opp_id;
+                            FETCH check_opp_id INTO checked_opp_id;
+                                OPEN check_date;
+                                FETCH check_date INTO checked_date;
+                                    IF check_date%NOTFOUND THEN
+                                        IF check_person_id%FOUND AND check_member_id%FOUND AND check_opp_id%FOUND THEN
+                                            INSERT INTO VM_TIMESHEET
+                                            VALUES (
+                                                p_volunteer_date,
+                                                p_hours,
+                                                to_date(CURRENT_DATE,'DD-MM-YY'),
+                                                'pending',
+                                                null,
+                                                checked_opp_id,
+                                                checked_member_id
+                                            );
+                                            COMMIT;
+
+                                            DBMS_OUTPUT.PUT_LINE('Commitment hours added to user ' || p_member_email || '!');
+                                        ELSIF check_member_id%NOTFOUND AND check_opp_id%NOTFOUND THEN
+                                            ex_error_msg := 'Member "' || checked_person_id || '" and organization ID "' || p_opportunity_id || '" does not exist!';
+                                            RAISE ex_exception;
+                                        ELSIF check_member_id%NOTFOUND THEN
+                                            ex_error_msg := 'Member ' || checked_person_id || ' not found. No hours added';
+                                            RAISE ex_exception;
+                                        ELSIF check_opp_id%NOTFOUND THEN
+                                            ex_error_msg := 'Missing opportunity. No commitment added';
+                                            RAISE ex_exception;
+                                        ELSE
+                                            ex_error_msg := 'An error occured inserting a commitment';
+                                            RAISE ex_exception;
+                                        END IF;
+                                    ELSE
+                                        ex_error_msg := 'You have already inserted commitment hours today for member: "' || p_member_email || '" in opportunity ID ' || p_opportunity_id || '!';
+                                        RAISE ex_exception;
+                                    END IF;
+                                CLOSE check_date;
+                            CLOSE check_opp_id;
+                        CLOSE check_member_id;
+                    ELSE
+                        ex_error_msg := 'Person with email "' || p_member_email || '" does not exist!';
+                        RAISE ex_exception;
+                    END IF;
+                CLOSE check_person_id;
+            END IF;
+        
+            EXCEPTION
+                WHEN ex_exception THEN
+                    DBMS_OUTPUT.PUT_LINE(ex_error_msg);
+                    ROLLBACK;
+                WHEN OTHERS THEN
+                    DBMS_OUTPUT.PUT_LINE('An error occured inserting new record!');
+                    dbms_output.put_line('Error code: ' || sqlcode);
+                    dbms_output.put_line('Error message: ' || sqlerrm);
+                    ROLLBACK;
+        END RECORD_HOURS_PP;
 
     procedure APPROVE_HOURS_PP (
         p_member_email      IN VARCHAR,    -- Must not be NULL.
