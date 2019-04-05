@@ -27,8 +27,8 @@ IS
     ex_exception            EXCEPTION;
     ex_error_msg            VARCHAR (200);
     current_creation_date   DATE;
-    person_id_out           NUMBER;
     location_id_out         NUMBER;
+    person_id_out           NUMBER;
 
     BEGIN
         IF p_org_creation_date IS NULL THEN
@@ -47,14 +47,6 @@ IS
             ex_error_msg := 'Missing organization phone! Can not be NULL';
             RAISE ex_exception;
         ELSE
-            CREATE_PERSON_SP (
-                person_id_out,
-                p_person_email,
-                P_person_given_name,
-                p_person_surname,
-                p_person_phone
-            );
-            
             CREATE_LOCATION_SP (
                 location_id_out,
                 p_location_country,
@@ -63,6 +55,14 @@ IS
                 p_location_street2,
                 p_location_city,
                 p_location_administrative_region
+            );
+
+            CREATE_PERSON_SP (
+                person_id_out,
+                p_person_email,
+                P_person_given_name,
+                p_person_surname,
+                p_person_phone
             );
 
             p_org_id := ORGANIZATION_ID_SEQ.NEXTVAL;
@@ -94,7 +94,7 @@ IS
                 DBMS_OUTPUT.PUT_LINE(ex_error_msg);
                 ROLLBACK;
             WHEN OTHERS THEN
-                DBMS_OUTPUT.PUT_LINE('An error occured inserting new opportunity!');
+                DBMS_OUTPUT.PUT_LINE('An error occured inserting new organization!');
                 dbms_output.put_line('Error code: ' || sqlcode);
                 dbms_output.put_line('Error message: ' || sqlerrm);
                 ROLLBACK;
