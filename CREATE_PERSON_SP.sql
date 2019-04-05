@@ -7,7 +7,7 @@ create or replace procedure CREATE_PERSON_SP (
 )
 IS
     ex_exception        EXCEPTION;
-    ex_error_msg        VARCHAR(200);
+    ex_error_msg        VARCHAR (200);
     checked_person_id   NUMBER;
 
     CURSOR check_person_email IS
