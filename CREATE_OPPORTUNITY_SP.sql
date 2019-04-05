@@ -99,7 +99,7 @@ IS
 
                     DBMS_OUTPUT.PUT_LINE('Opportunity added with ID: ' || p_opp_id);
                 ELSE
-                    ex_error_msg := 'Organization with ID: ' || p_org_id || ' not found!';
+                    ex_error_msg := 'Organization ID: ' || p_org_id || ' not found!';
                     RAISE ex_exception;
                 END IF;
             CLOSE check_org_id;
