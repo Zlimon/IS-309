@@ -25,10 +25,10 @@ create or replace procedure CREATE_OPPORTUNITY_SP (
 )
 IS
     ex_exception        EXCEPTION;
-    ex_error_msg        VARCHAR(200);
+    ex_error_msg        VARCHAR (200);
+    org_id_out          NUMBER;
     current_create_date DATE;
     location_id_out     NUMBER;
-    org_id_out          NUMBER;
     person_id_out       NUMBER;
 
     CURSOR check_org_id IS
