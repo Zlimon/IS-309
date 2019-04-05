@@ -14,7 +14,7 @@ create or replace procedure CREATE_MEMBER_SP (
 )
 IS
     ex_exception    EXCEPTION;
-    ex_error_msg    VARCHAR(100);
+    ex_error_msg    VARCHAR (200);
     person_id_out   NUMBER;
     location_id_out NUMBER;
 
