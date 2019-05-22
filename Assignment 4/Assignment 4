@@ -1,0 +1,311 @@
+create tablespace TEAMLENNY64KB 
+DATAFILE '/u01/app/oracle/oradata/WOLCOTTDB/TEAMLENNY64KB.dbf' 
+SIZE 64K
+EXTENT MANAGEMENT LOCAL 
+UNIFORM SIZE 64K
+SEGMENT SPACE MANAGEMENT AUTO;
+
+create tablespace TEAMLENNY128KB 
+DATAFILE '/u01/app/oracle/oradata/WOLCOTTDB/TEAMLENNY128KB.dbf' 
+SIZE 128K
+EXTENT MANAGEMENT LOCAL 
+UNIFORM SIZE 128K
+SEGMENT SPACE MANAGEMENT AUTO;
+
+create tablespace TEAMLENNY512KB 
+DATAFILE '/u01/app/oracle/oradata/WOLCOTTDB/TEAMLENNY512KB.dbf' 
+SIZE 512K
+EXTENT MANAGEMENT LOCAL 
+UNIFORM SIZE 512K
+SEGMENT SPACE MANAGEMENT AUTO;
+
+create tablespace TEAMLENNY1MB 
+DATAFILE '/u01/app/oracle/oradata/WOLCOTTDB/TEAMLENNY1MB.dbf' 
+SIZE 1M
+EXTENT MANAGEMENT LOCAL 
+UNIFORM SIZE 4M
+SEGMENT SPACE MANAGEMENT AUTO;
+
+create tablespace TEAMLENNY2MB 
+DATAFILE '/u01/app/oracle/oradata/WOLCOTTDB/TEAMLENNY2MB.dbf' 
+SIZE 2M
+EXTENT MANAGEMENT LOCAL 
+UNIFORM SIZE 2M
+SEGMENT SPACE MANAGEMENT AUTO;
+
+create tablespace TEAMLENNY8MB 
+DATAFILE '/u01/app/oracle/oradata/WOLCOTTDB/TEAMLENNY8MB.dbf' 
+SIZE 8M
+EXTENT MANAGEMENT LOCAL 
+UNIFORM SIZE 4M
+SEGMENT SPACE MANAGEMENT AUTO;
+
+create tablespace TEAMLENNY16MB 
+DATAFILE '/u01/app/oracle/oradata/WOLCOTTDB/TEAMLENNY16MB.dbf' 
+SIZE 16M
+EXTENT MANAGEMENT LOCAL 
+UNIFORM SIZE 4M
+SEGMENT SPACE MANAGEMENT AUTO;
+
+
+
+ALTER TABLE VM_CAUSE MOVE 
+PCTFREE 0
+STORAGE(INITIAL 64K NEXT 64K)
+TABLESPACE TEAMLENNY64KB;
+
+ALTER TABLE VM_COMMITMENT MOVE 
+PCTFREE 5
+STORAGE(INITIAL 4M NEXT 4M) /*STORAGE(INITIAL 565M NEXT 16M)*/ 
+TABLESPACE TEAMLENNY16MB;
+
+ALTER TABLE VM_LOCATION MOVE 
+PCTFREE 20
+STORAGE(INITIAL 4M NEXT 4M) /*STORAGE(INITIAL 504M NEXT 16M)*/
+TABLESPACE TEAMLENNY16MB;
+
+ALTER TABLE VM_MEMBER MOVE 
+PCTFREE 15
+STORAGE(INITIAL 4M NEXT 4M) /*STORAGE(INITIAL 191M NEXT 8M)*/
+TABLESPACE TEAMLENNY8MB;
+
+ALTER TABLE VM_MEMCAUSE MOVE 
+PCTFREE 0
+STORAGE(INITIAL 4M NEXT 4M) /*STORAGE(INITIAL 474M NEXT 16M)*/
+TABLESPACE TEAMLENNY16MB;
+
+ALTER TABLE VM_MEMSKILL MOVE 
+PCTFREE 0
+STORAGE(INITIAL 4M NEXT 4M) /*STORAGE(INITIAL 184M NEXT 8M)*/
+TABLESPACE TEAMLENNY8MB;
+
+ALTER TABLE VM_OPPORTUNITY MOVE 
+PCTFREE 5
+STORAGE(INITIAL 4M NEXT 1M) /*STORAGE(INITIAL 36M NEXT 1M)*/
+TABLESPACE TEAMLENNY1MB;
+
+ALTER TABLE VM_OPPSKILL MOVE
+PCTFREE 0
+STORAGE(INITIAL 4M NEXT 512K) /*STORAGE(INITIAL 17M NEXT 512K)*/
+TABLESPACE TEAMLENNY512KB;
+
+ALTER TABLE VM_ORGANIZATION MOVE
+PCTFREE 5
+STORAGE(INITIAL 4M NEXT 1M) /*STORAGE(INITIAL 35M NEXT 1M)*/
+TABLESPACE TEAMLENNY1MB;
+
+ALTER TABLE VM_ORGCAUSE MOVE
+PCTFREE 0
+STORAGE(INITIAL 4M NEXT 128K) /*STORAGE(INITIAL 7M NEXT 128K)*/
+TABLESPACE TEAMLENNY128KB;
+
+ALTER TABLE VM_PERSON MOVE
+PCTFREE 10
+STORAGE(INITIAL 4M NEXT 512K) /*STORAGE(INITIAL 7M NEXT 512K)*/
+TABLESPACE TEAMLENNY512KB;
+
+ALTER TABLE VM_SKILL MOVE
+PCTFREE 0
+STORAGE(INITIAL 1M NEXT 64K)
+TABLESPACE TEAMLENNY64KB;
+
+ALTER TABLE VM_TIMESHEET MOVE
+PCTFREE 10
+STORAGE(INITIAL 4M NEXT 2M) /*STORAGE(INITIAL 1025M NEXT 2M)*/
+TABLESPACE TEAMLENNY2MB
+
+
+
+ALTER USER GROUP10 QUOTA 100M ON INDX;
+
+BEGIN
+    FOR i IN (SELECT * FROM USER_Indexes WHERE STATUS = 'UNUSABLE' AND INDEX_TYPE = 'NORMAL')
+    LOOP
+        EXECUTE IMMEDIATE 'ALTER INDEX ' || i.INDEX_NAME || ' REBUILD TABLESPACE INDX';
+    END LOOP;
+END;
+
+
+
+CREATE ROLE roleViewer;
+GRANT CREATE SESSION TO roleViewer;
+BEGIN
+    FOR i IN (SELECT * FROM user_tables)
+    LOOP
+        EXECUTE IMMEDIATE 'GRANT SELECT ON ' || i.table_name || ' TO roleViewer';
+    END LOOP;
+END;
+
+CREATE ROLE roleAdmin;
+GRANT CREATE SESSION TO roleAdmin;
+GRANT EXECUTE ON VOLUNTEER3B_PKG TO roleAdmin;
+
+create or replace package roleOppAdmin_pkg
+IS
+procedure CREATE_LOCATION_PP (
+  p_location_id		    OUT	INTEGER,        -- an output parameter
+  p_location_country	IN	VARCHAR,        -- must not be NULL
+  p_location_postal_code IN	VARCHAR,        -- must not be NULL
+  p_location_street1	IN	VARCHAR,
+  p_location_street2	IN	VARCHAR,
+  p_location_city	    IN	VARCHAR,
+  p_location_administrative_region IN VARCHAR
+);
+procedure CREATE_PERSON_PP (
+    p_person_ID             OUT INTEGER,     -- an output parameter
+    p_person_email          IN VARCHAR,  -- Must be unique, not null
+    P_person_given_name     IN VARCHAR,  -- NOT NULL, if email is unique (new)
+    p_person_surname        IN VARCHAR,  -- NOT NULL, if email is unique (new)
+    p_person_phone          IN VARCHAR
+);
+procedure CREATE_MEMBER_PP (
+    p_person_ID             OUT INTEGER,     -- an output parameter
+    p_person_email          IN  VARCHAR,  -- passed through to CREATE_PERSON_PP
+    P_person_given_name     IN  VARCHAR,  -- passed through to CREATE_PERSON_PP
+    p_person_surname        IN  VARCHAR,  -- passed through to CREATE_PERSON_PP
+    p_person_phone          IN  VARCHAR,  -- passed through to CREATE_PERSON_PP
+    p_location_country	    IN  VARCHAR,  -- passed through to CREATE_LOCATION_PP
+    p_location_postal_code  IN	VARCHAR,  -- passed through to CREATE_LOCATION_PP
+    p_location_street1	    IN	VARCHAR,  -- passed through to CREATE_LOCATION_PP
+    p_location_street2	    IN	VARCHAR,  -- passed through to CREATE_LOCATION_PP
+    p_location_city	        IN	VARCHAR,  -- passed through to CREATE_LOCATION_PP
+    p_location_administrative_region IN VARCHAR, -- passed through to CREATE_LOCATION_SP
+    p_member_password       IN  VARCHAR   -- NOT NULL  
+);
+procedure CREATE_ORGANIZATION_PP (
+    p_org_id                    OUT INTEGER,    -- output parameter
+    p_org_name                  IN VARCHAR,     -- NOT NULL
+    p_org_mission               IN VARCHAR,     -- NOT NULL
+    p_org_descrip               IN LONG,            
+    p_org_phone                 IN VARCHAR,     -- NOT NULL
+    p_org_type                  IN VARCHAR,     -- must conform to domain, if it has a value
+    p_org_creation_date         IN DATE,            -- IF NULL, use SYSDATE
+    p_org_URL                   IN VARCHAR,
+    p_org_image_URL             IN VARCHAR,
+    p_org_linkedin_URL          IN VARCHAR,
+    p_org_facebook_URL          IN VARCHAR,
+    p_org_twitter_URL           IN VARCHAR,
+    p_location_country	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_postal_code      IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street1	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street2	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_city	            IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_administrative_region IN VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_person_email              IN VARCHAR,  -- passed to CREATE_PERSON_SP
+    P_person_given_name         IN VARCHAR,  -- passed to CREATE_PERSON_SP
+    p_person_surname            IN VARCHAR,  -- passed to CREATE_PERSON_SP
+    p_person_phone              IN VARCHAR   -- passed to CREATE_PERSON_SP
+);
+procedure CREATE_OPPORTUNITY_PP (
+    p_opp_id                    OUT INTEGER,        -- output parameter
+    p_org_id                    IN  INTEGER,        -- NOT NULL
+    p_opp_title                 IN  VARCHAR,   -- NOT NULL
+    p_opp_description           IN  LONG,       
+    p_opp_create_date           IN  DATE,       -- If NULL, use SYSDATE
+    p_opp_max_volunteers        IN  INTEGER,    -- If provided, must be > 0
+    p_opp_min_volunteer_age     IN  INTEGER,    -- If provided, must be between 0 and 125
+    p_opp_start_date            IN  DATE,
+    p_opp_start_time            IN  CHAR,       
+    p_opp_end_date              IN  DATE,
+    p_opp_end_time              IN  CHAR,
+    p_opp_status                IN  VARCHAR,    -- If provided, must conform to domain
+    p_opp_great_for             IN  VARCHAR,    -- If provided, must conform to domain
+    p_location_country	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_postal_code      IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street1	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street2	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_city	            IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_administrative_region IN VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_person_email              IN VARCHAR,   -- passed to CREATE_PERSON_SP
+    P_person_given_name         IN VARCHAR,   -- passed to CREATE_PERSON_SP
+    p_person_surname            IN VARCHAR,   -- passed to CREATE_PERSON_SP
+    p_person_phone              IN VARCHAR    -- passed to CREATE_PERSON_SP    
+);
+procedure ADD_ORG_CAUSE_PP (
+    p_org_id            IN  INTEGER,    -- NOT NULL
+    p_cause_name        IN  VARCHAR -- NOT NULL
+);
+procedure ADD_OPP_SKILL_PP (
+    p_opp_id        IN  INTEGER,    -- NOT NULL
+    p_skill_name    IN  VARCHAR     -- NOT NULL
+);
+end roleOppAdmin_pkg;
+
+CREATE ROLE roleOppAdmin;
+GRANT CREATE SESSION TO roleOppAdmin;
+GRANT EXECUTE ON roleOppAdmin_PKG TO roleOppAdmin;
+
+create or replace package roleMember_pkg
+IS
+procedure CREATE_PERSON_PP (
+    p_person_ID             OUT INTEGER,     -- an output parameter
+    p_person_email          IN VARCHAR,  -- Must be unique, not null
+    P_person_given_name     IN VARCHAR,  -- NOT NULL, if email is unique (new)
+    p_person_surname        IN VARCHAR,  -- NOT NULL, if email is unique (new)
+    p_person_phone          IN VARCHAR
+);
+procedure CREATE_MEMBER_PP (
+    p_person_ID             OUT INTEGER,     -- an output parameter
+    p_person_email          IN  VARCHAR,  -- passed through to CREATE_PERSON_PP
+    P_person_given_name     IN  VARCHAR,  -- passed through to CREATE_PERSON_PP
+    p_person_surname        IN  VARCHAR,  -- passed through to CREATE_PERSON_PP
+    p_person_phone          IN  VARCHAR,  -- passed through to CREATE_PERSON_PP
+    p_location_country	    IN  VARCHAR,  -- passed through to CREATE_LOCATION_PP
+    p_location_postal_code  IN	VARCHAR,  -- passed through to CREATE_LOCATION_PP
+    p_location_street1	    IN	VARCHAR,  -- passed through to CREATE_LOCATION_PP
+    p_location_street2	    IN	VARCHAR,  -- passed through to CREATE_LOCATION_PP
+    p_location_city	        IN	VARCHAR,  -- passed through to CREATE_LOCATION_PP
+    p_location_administrative_region IN VARCHAR, -- passed through to CREATE_LOCATION_SP
+    p_member_password       IN  VARCHAR   -- NOT NULL  
+);
+procedure ADD_MEMBER_CAUSE_PP (
+    p_person_id     IN  INTEGER,    -- NOT NULL
+    p_cause_name    IN  VARCHAR     -- NOT NULL
+);
+procedure ADD_MEMBER_SKILL_PP (
+    p_person_id     IN  INTEGER,    -- NOT NULL
+    p_skill_name    IN  VARCHAR -- NOT NULL
+);
+procedure CREATE_COMMITMENT_PP (
+    p_commitment_id     OUT INTEGER,    -- Output parameter
+    p_member_email      IN  VARCHAR,    -- Not NULL
+    p_opportunity_id    IN  VARCHAR,    -- Not NULL
+    p_start_date        IN  DATE,       
+    p_end_date          IN  DATE
+);
+end roleMember_pkg;
+
+CREATE ROLE roleMember;
+GRANT CREATE SESSION TO roleMember;
+GRANT EXECUTE ON roleMember_PKG TO roleMember;
+
+
+
+CREATE PROFILE PROFILE_TEAM_LENNY 
+LIMIT
+SESSIONS_PER_USER          2 
+CPU_PER_SESSION            10000
+IDLE_TIME                  60
+CONNECT_TIME               180
+CPU_PER_CALL               3000
+FAILED_LOGIN_ATTEMPTS      2
+PASSWORD_LIFE_TIME         30
+PASSWORD_GRACE_TIME        14;
+
+CREATE USER TL_1
+IDENTIFIED BY pw_tl_1
+DEFAULT TABLESPACE USERS
+PROFILE PROFILE_TEAM_LENNY 
+QUOTA 0M on USERS
+PASSWORD EXPIRE;
+
+CREATE USER TL_2
+IDENTIFIED BY pw_tl_2
+DEFAULT TABLESPACE USERS
+PROFILE PROFILE_TEAM_LENNY 
+QUOTA 50M on USERS
+PASSWORD EXPIRE;
+
+GRANT roleViewer TO TL_1;
+
+GRANT roleAdmin TO TL_2;
